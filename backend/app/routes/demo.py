@@ -37,6 +37,16 @@ def limited(result: RateLimitResult):
     return {"error": "rate_limited", "message": f"Too many requests. Try again in {seconds} seconds.", "retry_after_seconds": seconds}, seconds
 
 
+@router.post("/demo/reset")
+async def reset_demo(request: Request):
+    """Demo-only reset: remove only this app's rate-limiter state from Redis."""
+    redis = request.app.state.limiter.redis
+    keys = [key async for key in redis.scan_iter(match="rl:*")]
+    if keys:
+        await redis.delete(*keys)
+    return {"ok": True, "deleted_keys": len(keys)}
+
+
 @router.post("/demo/traffic")
 async def traffic(request: Request, algorithm: str | None = None):
     # This algorithm override is demo-only scaffolding; production uses fixed config rules.

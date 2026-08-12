@@ -6,37 +6,63 @@ import "./style.css";
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const algorithms = ["token_bucket", "sliding_window"];
 
-function AlgorithmCard({ algorithm, events }) {
+function Countdown({ event, label, now }) {
+  if (!event || event.allowed) return null;
+  const unlockAt = new Date(event.timestamp).getTime() + event.retry_after * 1000;
+  const seconds = Math.max(0, (unlockAt - now) / 1000);
+  if (seconds === 0) return null;
+  return (
+    <div className="countdown" aria-live="polite">
+      <span>{label}</span>
+      <strong>{seconds.toFixed(1)}s</strong>
+    </div>
+  );
+}
+
+function TokenBucketVisual({ event, now }) {
+  const state = event?.algorithm_state || {};
+  const capacity = state.capacity ?? 12;
+  const refillRate = state.refill_rate ?? 2;
+  const reportedTokens = state.tokens ?? capacity;
+  const elapsedSeconds = event ? Math.max(0, (now - new Date(event.timestamp).getTime()) / 1000) : 0;
+  const tokens = Math.min(capacity, reportedTokens + elapsedSeconds * refillRate);
+  const wholeTokens = Math.floor(tokens);
+  const fractionalPercent = Math.round((tokens - wholeTokens) * 100);
+
+  return (
+    <>
+      <div className="bucket-wrap" aria-label={`${tokens.toFixed(1)} of ${capacity} tokens available`}>
+        <span className="bucket-inflow">refilling at {refillRate}/sec</span>
+        <div className="bucket-rim" />
+        <div className="bucket">
+          {Array.from({ length: capacity }, (_, index) => {
+            const fill = index < wholeTokens ? 100 : index === wholeTokens ? fractionalPercent : 0;
+            return <span className="token-slot" key={index}><i style={{ width: `${fill}%` }} /></span>;
+          })}
+        </div>
+      </div>
+      <div className="bucket-readout">
+        <strong>{tokens.toFixed(1)} / {capacity} tokens</strong>
+        <span>{fractionalPercent > 0 ? `${fractionalPercent}% toward the next token` : "whole tokens ready to spend"}</span>
+      </div>
+    </>
+  );
+}
+
+function AlgorithmCard({ algorithm, events, now }) {
   const recent = events.filter((e) => e.algorithm === algorithm).slice(-20);
   const last = recent.at(-1);
   if (algorithm === "token_bucket") {
     const state = last?.algorithm_state || {};
-    const tokens = state.tokens ?? 0,
-      capacity = state.capacity ?? 12;
     return (
       <section className="card">
         <h3>Token bucket</h3>
-        <div className="gauge">
-          <div
-            style={{ width: `${Math.min(100, (tokens / capacity) * 100)}%` }}
-          />
-        </div>
-        <strong>
-          {tokens.toFixed?.(1) ?? tokens} / {capacity} tokens
-        </strong>
+        <TokenBucketVisual event={last} now={now} />
         <p>
           Allows a short burst, then refills at {state.refill_rate ?? 2}{" "}
           tokens/sec.
         </p>
-        <ResponsiveContainer width="100%" height={105}>
-          <BarChart
-            data={recent.map((x, i) => ({ i, allowed: x.allowed ? 1 : 0 }))}
-          >
-            <XAxis dataKey="i" hide />
-            <YAxis domain={[0, 1]} hide />
-            <Bar dataKey="allowed" fill="#45d4a5" />
-          </BarChart>
-        </ResponsiveContainer>
+        <Countdown event={last} label="Next token available in" now={now} />
       </section>
     );
   }
@@ -59,6 +85,7 @@ function AlgorithmCard({ algorithm, events }) {
         ))}
       </div>
       <p>The window moves continuously; the cap stays strict.</p>
+      <Countdown event={last} label="Window unlocks in" now={now} />
       <ResponsiveContainer width="100%" height={105}>
         <BarChart
           data={recent.map((x, i) => ({ i, allowed: x.allowed ? 1 : 0 }))}
@@ -76,13 +103,18 @@ function App() {
   const [events, setEvents] = useState([]),
     [mode, setMode] = useState("both"),
     [pattern, setPattern] = useState("burst"),
-    [login, setLogin] = useState(false);
+    [login, setLogin] = useState(false),
+    [now, setNow] = useState(Date.now());
   const timers = useRef([]);
   useEffect(() => {
     const source = new EventSource(`${API}/demo/stream`);
     source.onmessage = (e) =>
       setEvents((x) => [...x, JSON.parse(e.data)].slice(-100));
     return () => source.close();
+  }, []);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(timer);
   }, []);
   const fire = (algorithm) =>
     fetch(`${API}/demo/${login ? "login" : "traffic"}?algorithm=${algorithm}`, {
@@ -105,6 +137,12 @@ function App() {
         for (let i = 1; i <= 10; i++)
           timers.current.push(setTimeout(send, i * 800));
     }
+  };
+  const resetDemo = async () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    await fetch(`${API}/demo/reset`, { method: "POST" });
+    setEvents([]);
   };
   return (
     <main>
@@ -153,6 +191,9 @@ function App() {
             >
               Fire one
             </button>
+            <button className="reset" onClick={resetDemo}>
+              Reset demo
+            </button>
           </div>
           <details>
             <summary>Why this design?</summary>
@@ -168,10 +209,10 @@ function App() {
         </section>
         <section className="visuals">
           {(mode === "both" || mode === "token_bucket") && (
-            <AlgorithmCard algorithm="token_bucket" events={events} />
+            <AlgorithmCard algorithm="token_bucket" events={events} now={now} />
           )}{" "}
           {(mode === "both" || mode === "sliding_window") && (
-            <AlgorithmCard algorithm="sliding_window" events={events} />
+            <AlgorithmCard algorithm="sliding_window" events={events} now={now} />
           )}
           <section className="log">
             <h2>Live request log</h2>

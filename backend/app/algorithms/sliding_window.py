@@ -10,7 +10,12 @@ from .models import RateLimitResult
 
 SLIDING_WINDOW_LUA = """
 local count = 0
-for i = 1, #KEYS do count = count + (tonumber(redis.call('GET', KEYS[i])) or 0) end
+local oldest_index = 0
+for i = 1, #KEYS do
+  local bucket_count = tonumber(redis.call('GET', KEYS[i])) or 0
+  count = count + bucket_count
+  if bucket_count > 0 then oldest_index = i end
+end
 local limit = tonumber(ARGV[1])
 local allowed = count < limit
 if allowed then
@@ -18,7 +23,7 @@ if allowed then
   redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
   count = count + 1
 end
-return {allowed and 1 or 0, count}
+return {allowed and 1 or 0, count, oldest_index}
 """
 
 
@@ -33,11 +38,14 @@ class SlidingWindow:
         current = int(now)
         buckets = list(range(current - self.window_seconds + 1, current + 1))
         redis_keys = [f"{self.prefix}:{key}:{bucket}" for bucket in reversed(buckets)]
-        allowed, count = await self.redis.eval(
+        allowed, count, oldest_index = await self.redis.eval(
             SLIDING_WINDOW_LUA, len(redis_keys), *redis_keys, self.limit, self.window_seconds + 1
         )
         oldest = current - self.window_seconds + 1
-        retry_after = max(0.0, float(oldest + self.window_seconds - now)) if not allowed else 0.0
+        # Keys are ordered newest to oldest. The oldest nonempty bucket is the
+        # first to leave the trailing window, so it defines the countdown.
+        oldest_active = current - (int(oldest_index) - 1)
+        retry_after = max(0.0, float(oldest_active + self.window_seconds - now)) if not allowed else 0.0
         return RateLimitResult(
             bool(allowed), max(0, self.limit - int(count)), retry_after,
             {"limit": self.limit, "count": int(count), "window_seconds": self.window_seconds,
