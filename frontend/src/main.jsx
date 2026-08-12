@@ -102,10 +102,12 @@ function AlgorithmCard({ algorithm, events, now }) {
 function App() {
   const [events, setEvents] = useState([]),
     [mode, setMode] = useState("both"),
-    [pattern, setPattern] = useState("burst"),
-    [login, setLogin] = useState(false),
+    [preset, setPreset] = useState("burst"),
+    [rps, setRps] = useState(2),
+    [burstSize, setBurstSize] = useState(10),
     [now, setNow] = useState(Date.now());
   const timers = useRef([]);
+  const login = preset === "login";
   useEffect(() => {
     const source = new EventSource(`${API}/demo/stream`);
     source.onmessage = (e) =>
@@ -126,16 +128,19 @@ function App() {
     });
   const run = () => {
     timers.current.forEach(clearTimeout);
+    timers.current = [];
     const targets = mode === "both" ? algorithms : [mode];
     const send = () => targets.forEach(fire);
-    if (pattern === "steady") {
-      for (let i = 0; i < 12; i++)
-        timers.current.push(setTimeout(send, i * 500));
+    const interval = 1000 / rps;
+    const scheduleSteady = (start = 0, durationSeconds = 6) => {
+      for (let i = 0; i < rps * durationSeconds; i++)
+        timers.current.push(setTimeout(send, start + i * interval));
+    };
+    if (preset === "steady") {
+      scheduleSteady();
     } else {
-      for (let i = 0; i < 10; i++) send();
-      if (pattern === "trickle")
-        for (let i = 1; i <= 10; i++)
-          timers.current.push(setTimeout(send, i * 800));
+      for (let i = 0; i < burstSize; i++) send();
+      if (preset === "trickle" || preset === "login") scheduleSteady(1000);
     }
   };
   const resetDemo = async () => {
@@ -154,16 +159,36 @@ function App() {
       <div className="layout">
         <section className="controls">
           <h2>Traffic simulator</h2>
+          <div className="primary-actions">
+            <button className="start" onClick={run}>Start simulation</button>
+            <button className="secondary" onClick={() =>
+              (mode === "both" ? algorithms : [mode]).forEach(fire)
+            }>Fire one</button>
+          </div>
+          <div className="control-divider" />
+          <h3 className="parameters-title">Simulation parameters</h3>
           <label>
-            Scenario
+            Scenario preset
             <select
-              value={pattern}
-              onChange={(e) => setPattern(e.target.value)}
+              value={preset}
+              onChange={(e) => setPreset(e.target.value)}
             >
               <option value="steady">Steady traffic</option>
               <option value="burst">Burst then idle</option>
               <option value="trickle">Burst then trickle</option>
+              <option value="login">Login brute-force</option>
             </select>
+          </label>
+          <button className="reset" onClick={resetDemo}>Reset</button>
+          <label>
+            Request rate <output>{rps} RPS</output>
+            <input type="range" min="1" max="10" value={rps}
+              onChange={(e) => setRps(Number(e.target.value))} />
+          </label>
+          <label>
+            Burst size <output>{burstSize} requests</output>
+            <input type="range" min="1" max="20" value={burstSize}
+              onChange={(e) => setBurstSize(Number(e.target.value))} />
           </label>
           <label>
             Run against
@@ -173,28 +198,6 @@ function App() {
               <option value="sliding_window">Sliding window</option>
             </select>
           </label>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={login}
-              onChange={(e) => setLogin(e.target.checked)}
-            />{" "}
-            Login brute-force preset
-          </label>
-          <div className="buttons">
-            <button onClick={run}>Run scenario</button>
-            <button
-              className="secondary"
-              onClick={() =>
-                (mode === "both" ? algorithms : [mode]).forEach(fire)
-              }
-            >
-              Fire one
-            </button>
-            <button className="reset" onClick={resetDemo}>
-              Reset demo
-            </button>
-          </div>
           <details>
             <summary>Why this design?</summary>
             <p>

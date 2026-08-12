@@ -59,13 +59,10 @@ select {
   color: white;
   padding: 10px;
 }
-.toggle {
-  font-size: 14px;
-}
-.buttons {
+.primary-actions {
   display: flex;
   gap: 8px;
-  margin: 22px 0;
+  margin: 14px 0 22px;
 }
 button {
   background: #61d9ae;
@@ -75,14 +72,41 @@ button {
   font-weight: bold;
   cursor: pointer;
 }
+.start {
+  flex: 1;
+  font-size: 15px;
+}
 .secondary {
   background: #333d58;
   color: #fff;
 }
 .reset {
+  width: 100%;
+  margin-top: 10px;
   background: transparent;
   border: 1px solid #6b3f52;
   color: #ffadba;
+}
+.control-divider {
+  height: 1px;
+  margin: 20px 0;
+  background: #30384e;
+}
+.parameters-title {
+  margin: 0;
+  font-size: 15px;
+  color: #d5dbea;
+}
+label output {
+  float: right;
+  color: #7ee5c0;
+  font: 12px "DM Mono";
+}
+input[type="range"] {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  accent-color: #61d9ae;
 }
 details {
   border-top: 1px solid #30384e;
