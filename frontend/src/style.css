@@ -1,0 +1,172 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono&family=Outfit:wght@400;500;700&display=swap");
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: #10131d;
+  color: #e7eaf2;
+  font-family: Outfit, sans-serif;
+}
+main {
+  max-width: 1160px;
+  margin: auto;
+  padding: 55px 24px;
+}
+.eyebrow {
+  font: 12px "DM Mono";
+  letter-spacing: 0.13em;
+  color: #7ee5c0;
+}
+h1 {
+  font-size: 48px;
+  margin: 7px 0;
+}
+header p {
+  color: #aab2c9;
+  font-size: 18px;
+}
+.layout {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 22px;
+  margin-top: 38px;
+}
+.controls,
+.card,
+.log {
+  background: #191e2c;
+  border: 1px solid #2b344b;
+  border-radius: 15px;
+  padding: 20px;
+}
+h2,
+h3 {
+  margin-top: 0;
+}
+label {
+  display: block;
+  color: #b9c1d5;
+  margin: 18px 0 5px;
+}
+select {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  background: #10131d;
+  border: 1px solid #3a4562;
+  border-radius: 8px;
+  color: white;
+  padding: 10px;
+}
+.toggle {
+  font-size: 14px;
+}
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin: 22px 0;
+}
+button {
+  background: #61d9ae;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.secondary {
+  background: #333d58;
+  color: #fff;
+}
+details {
+  border-top: 1px solid #30384e;
+  padding-top: 16px;
+  color: #b9c1d5;
+  font-size: 14px;
+}
+details a {
+  color: #7ee5c0;
+}
+.visuals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.gauge {
+  height: 18px;
+  border-radius: 20px;
+  background: #0c0f17;
+  overflow: hidden;
+  margin: 22px 0 8px;
+}
+.gauge div {
+  height: 100%;
+  background: linear-gradient(90deg, #45d4a5, #9ef6d0);
+  transition: width 0.2s;
+}
+.card p {
+  color: #aab2c9;
+  font-size: 14px;
+}
+.count {
+  font-size: 33px;
+  margin: 16px 0;
+}
+.count small {
+  font-size: 12px;
+  color: #aab2c9;
+}
+.dots {
+  height: 24px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  border-bottom: 1px dashed #53607d;
+}
+.dots i {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+}
+.yes {
+  background: #45d4a5;
+}
+.no {
+  background: #ff7082;
+}
+.log {
+  grid-column: 1/-1;
+  max-height: 280px;
+  overflow: auto;
+}
+.log div {
+  font: 12px "DM Mono";
+  padding: 7px;
+  border-bottom: 1px solid #252d40;
+}
+.log time {
+  color: #8290ae;
+  margin-right: 15px;
+}
+.log b {
+  font-weight: normal;
+  margin-right: 12px;
+}
+.allowed {
+  color: #5ce6b4;
+}
+.blocked {
+  color: #ff7182;
+}
+@media (max-width: 750px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .visuals {
+    grid-template-columns: 1fr;
+  }
+  h1 {
+    font-size: 38px;
+  }
+}

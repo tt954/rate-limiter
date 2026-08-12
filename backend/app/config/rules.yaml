@@ -1,0 +1,25 @@
+rate_limits:
+  default:
+    - key: ip
+      algorithm: token_bucket
+      capacity: 12
+      refill_rate: 2
+      count: all
+  routes:
+    /demo/traffic:
+      - key: ip
+        algorithm: token_bucket
+        capacity: 12
+        refill_rate: 2
+        count: all
+    /demo/login:
+      - key: ip
+        algorithm: sliding_window
+        limit: 10
+        window_seconds: 60
+        count: all
+      - key: account
+        algorithm: sliding_window
+        limit: 5
+        window_seconds: 60
+        count: failures_only
