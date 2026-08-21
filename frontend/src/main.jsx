@@ -220,17 +220,6 @@ function App() {
               <button className="w-full rounded border border-outline-variant bg-transparent py-1.5 font-label-technical text-label-technical text-on-surface-variant transition-colors hover:bg-surface-container-highest" onClick={resetDemo}>Reset</button>
             </div>
           </div>
-          <details>
-            <summary>Why this design?</summary>
-            <p>
-              {login
-                ? "RFC §5.1: login is security-sensitive; burst tolerance can enable probing, so sliding windows are selected."
-                : "RFC §5.1: general API traffic is naturally bursty, so token buckets smooth traffic without punishing legitimate page loads."}
-            </p>
-            <a href="https://github.com/" onClick={(e) => e.preventDefault()}>
-              See the included RFC →
-            </a>
-          </details>
         </section>
         <section className="visuals">
           {(mode === "both" || mode === "token_bucket") && (
