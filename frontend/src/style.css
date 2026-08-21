@@ -23,7 +23,7 @@
   .layout {
     @apply mt-stack-lg grid grid-cols-[290px_1fr] gap-gutter;
   }
-  .controls, .card, .log {
+  .controls, .log {
     @apply rounded-xl border border-outline-variant bg-surface-container-lowest p-5;
   }
   h2, h3 {
@@ -71,23 +71,6 @@
   .visuals {
     @apply grid grid-cols-2 gap-[18px];
   }
-  .card p {
-    @apply text-[14px] text-tertiary;
-  }
-  .count {
-    @apply my-stack-md text-[33px];
-  }
-  .count small {
-    @apply text-[12px] text-tertiary;
-  }
-  .dots {
-    @apply flex h-6 items-center gap-[5px] border-b border-dashed border-tertiary;
-  }
-  .dots i {
-    @apply h-2.5 w-2.5 rounded-full;
-  }
-  .yes { @apply bg-primary; }
-  .no { @apply bg-secondary; }
   .countdown {
     @apply my-[14px] flex items-baseline justify-between rounded-lg border border-primary-fixed-dim bg-primary-fixed px-3 py-2.5 text-[13px] text-secondary;
   }

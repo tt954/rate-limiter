@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import "./style.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -16,6 +15,20 @@ function Countdown({ event, label, now }) {
     <div className="countdown" aria-live="polite">
       <span>{label}</span>
       <strong>{seconds.toFixed(1)}s</strong>
+    </div>
+  );
+}
+
+function HeaderCountdown({ event, now }) {
+  const unlockAt = event
+    ? new Date(event.timestamp).getTime() + event.retry_after * 1000
+    : 0;
+  const seconds = Math.max(0, (unlockAt - now) / 1000);
+  const active = event && !event.allowed && seconds > 0;
+  return (
+    <div className={`min-w-[112px] text-right font-label-technical text-label-technical ${active ? "text-secondary" : "invisible"}`} aria-live="polite">
+      <div>Window unlocks in</div>
+      <strong className="font-code-sm text-[20px]">{active ? `${seconds.toFixed(1)}s` : "0.0s"}</strong>
     </div>
   );
 }
@@ -44,11 +57,9 @@ function AlgorithmCard({ algorithm, events, now }) {
           <div>
             <div className="mb-1 flex items-center gap-2">
               <span className="rounded border border-outline-variant bg-surface-container px-2 py-0.5 font-code-sm text-code-sm text-on-surface">TOKEN_BUCKET</span>
-              <span className="flex h-4 w-8 justify-end rounded-full bg-primary-container/20 p-0.5"><i className="h-3 w-3 rounded-full bg-primary-container" /></span>
             </div>
             <h3 className="font-headline-lg text-[24px] text-on-surface">Token bucket</h3>
           </div>
-          <span className="font-label-technical text-[20px] text-primary-container" aria-hidden="true">◉</span>
         </div>
         <p className="mb-6 flex-grow font-body-md text-sm text-on-surface-variant">Allows bursts up to its capacity. Each allowed request spends a token; Redis restores tokens at a fixed rate.</p>
         <div className="relative mb-4 h-32 rounded border border-outline-variant bg-surface p-2 [background-image:radial-gradient(#c3c6d7_1px,transparent_1px)] [background-size:8px_8px]">
@@ -74,32 +85,45 @@ function AlgorithmCard({ algorithm, events, now }) {
   const state = last?.algorithm_state || {};
   const count = state.count ?? 0,
     limit = state.limit ?? 10;
+  const samples = recent.length
+    ? recent.map((event) => Math.max(0, Math.min(limit, event.algorithm_state?.count ?? 0)))
+    : [0];
+  const points = samples.map((requestCount, index) => {
+    const x = samples.length === 1 ? 0 : (index / (samples.length - 1)) * 300;
+    const y = 90 - (requestCount / limit) * 70;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const area = `M0,100 L${points.replace(/ /g, " L")} L300,100 Z`;
+  const blocked = recent.filter((event) => !event.allowed).length;
+  const blockRate = recent.length ? (blocked / recent.length) * 100 : 0;
   return (
-    <section className="card">
-      <h3>Sliding window</h3>
-      <div className="count">
-        {count} <small>/ {limit} requests in trailing window</small>
+    <section className="group relative flex flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest p-6 transition-colors hover:border-secondary-container">
+      <div className="mb-4 flex items-start justify-between">
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <span className="rounded border border-outline-variant bg-surface-container px-2 py-0.5 font-code-sm text-code-sm text-on-surface">SLIDING_WINDOW</span>
+            </div>
+            <h3 className="font-headline-lg text-[24px] text-on-surface">Sliding window</h3>
+          </div>
+          <HeaderCountdown event={last} now={now} />
       </div>
-      <div className="dots">
-        {recent.map((x, i) => (
-          <i
-            key={i}
-            className={x.allowed ? "yes" : "no"}
-            title={x.allowed ? "allowed" : "blocked"}
-          />
-        ))}
+      <p className="mb-6 flex-grow font-body-md text-sm text-on-surface-variant">Counts every request within a moving time window, enforcing a strict cap without burst tolerance.</p>
+      <div className="relative mb-4 h-32 rounded border border-outline-variant bg-surface p-2 [background-image:radial-gradient(#c3c6d7_1px,transparent_1px)] [background-size:8px_8px]">
+        <span className="absolute left-2 top-1 font-label-technical text-[10px] text-on-surface-variant">Requests in trailing window</span>
+        <svg className="h-full w-full" viewBox="0 0 300 100" preserveAspectRatio="none" aria-label="Sliding window request count over recent requests">
+          <line x1="0" x2="300" y1="20" y2="20" stroke="#737686" strokeDasharray="2" />
+          <path d={area} fill="#dde1ff" />
+          <polyline points={points} fill="none" stroke="#3755c3" strokeWidth="2" />
+          {recent.map((event, index) => !event.allowed && (
+            <circle key={index} cx={samples.length === 1 ? 0 : (index / (samples.length - 1)) * 300} cy={20} fill="#ba1a1a" r="3" />
+          ))}
+        </svg>
       </div>
-      <p>The window moves continuously; the cap stays strict.</p>
-      <Countdown event={last} label="Window unlocks in" now={now} />
-      <ResponsiveContainer width="100%" height={105}>
-        <BarChart
-          data={recent.map((x, i) => ({ i, allowed: x.allowed ? 1 : 0 }))}
-        >
-          <XAxis dataKey="i" hide />
-          <YAxis domain={[0, 1]} hide />
-          <Bar dataKey="allowed" fill="#ab87ff" />
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="grid grid-cols-3 gap-4 border-t border-outline-variant pt-4">
+        <div><div className="font-label-technical text-label-technical text-on-surface-variant">Requests</div><div className="font-headline-lg text-[24px] text-on-surface">{recent.length}</div></div>
+        <div><div className="font-label-technical text-label-technical text-on-surface-variant">Block rate</div><div className="font-headline-lg text-[24px] text-error">{blockRate.toFixed(1)}<span className="font-code-sm text-sm text-on-surface-variant">%</span></div></div>
+        <div><div className="font-label-technical text-label-technical text-on-surface-variant">Hard cap</div><div className="font-headline-lg text-[24px] text-on-surface">{count}<span className="font-code-sm text-sm text-on-surface-variant">/{limit}</span></div></div>
+      </div>
     </section>
   );
 }
