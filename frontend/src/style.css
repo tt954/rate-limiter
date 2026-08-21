@@ -50,12 +50,6 @@
   .visuals {
     @apply grid grid-cols-2 gap-[18px];
   }
-  .countdown {
-    @apply my-[14px] flex items-baseline justify-between rounded-lg border border-primary-fixed-dim bg-primary-fixed px-3 py-2.5 text-[13px] text-secondary;
-  }
-  .countdown strong {
-    @apply font-code-sm text-[20px] text-secondary;
-  }
   .log {
     @apply col-[1/-1];
   }

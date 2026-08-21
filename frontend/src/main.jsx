@@ -5,21 +5,7 @@ import "./style.css";
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const algorithms = ["token_bucket", "sliding_window"];
 
-function Countdown({ event, label, now }) {
-  if (!event || event.allowed) return null;
-  const unlockAt =
-    new Date(event.timestamp).getTime() + event.retry_after * 1000;
-  const seconds = Math.max(0, (unlockAt - now) / 1000);
-  if (seconds === 0) return null;
-  return (
-    <div className="countdown" aria-live="polite">
-      <span>{label}</span>
-      <strong>{seconds.toFixed(1)}s</strong>
-    </div>
-  );
-}
-
-function HeaderCountdown({ event, now }) {
+function HeaderCountdown({ event, label, now }) {
   const unlockAt = event
     ? new Date(event.timestamp).getTime() + event.retry_after * 1000
     : 0;
@@ -27,7 +13,7 @@ function HeaderCountdown({ event, now }) {
   const active = event && !event.allowed && seconds > 0;
   return (
     <div className={`min-w-[112px] text-right font-label-technical text-label-technical ${active ? "text-secondary" : "invisible"}`} aria-live="polite">
-      <div>Window unlocks in</div>
+      <div>{label}</div>
       <strong className="font-code-sm text-[20px]">{active ? `${seconds.toFixed(1)}s` : "0.0s"}</strong>
     </div>
   );
@@ -60,6 +46,7 @@ function AlgorithmCard({ algorithm, events, now }) {
             </div>
             <h3 className="font-headline-lg text-[24px] text-on-surface">Token bucket</h3>
           </div>
+          <HeaderCountdown event={last} label="Next token in" now={now} />
         </div>
         <p className="mb-6 flex-grow font-body-md text-sm text-on-surface-variant">Allows bursts up to its capacity. Each allowed request spends a token; Redis restores tokens at a fixed rate.</p>
         <div className="relative mb-4 h-32 rounded border border-outline-variant bg-surface p-2 [background-image:radial-gradient(#c3c6d7_1px,transparent_1px)] [background-size:8px_8px]">
@@ -73,7 +60,6 @@ function AlgorithmCard({ algorithm, events, now }) {
             ))}
           </svg>
         </div>
-        <Countdown event={last} label="Next token available in" now={now} />
         <div className="grid grid-cols-3 gap-4 border-t border-outline-variant pt-4">
           <div><div className="font-label-technical text-label-technical text-on-surface-variant">Requests</div><div className="font-headline-lg text-[24px] text-on-surface">{recent.length}</div></div>
           <div><div className="font-label-technical text-label-technical text-on-surface-variant">Drop rate</div><div className="font-headline-lg text-[24px] text-error">{dropRate.toFixed(1)}<span className="font-code-sm text-sm text-on-surface-variant">%</span></div></div>
@@ -105,7 +91,7 @@ function AlgorithmCard({ algorithm, events, now }) {
             </div>
             <h3 className="font-headline-lg text-[24px] text-on-surface">Sliding window</h3>
           </div>
-          <HeaderCountdown event={last} now={now} />
+          <HeaderCountdown event={last} label="Window unlocks in" now={now} />
       </div>
       <p className="mb-6 flex-grow font-body-md text-sm text-on-surface-variant">Counts every request within a moving time window, enforcing a strict cap without burst tolerance.</p>
       <div className="relative mb-4 h-32 rounded border border-outline-variant bg-surface p-2 [background-image:radial-gradient(#c3c6d7_1px,transparent_1px)] [background-size:8px_8px]">
