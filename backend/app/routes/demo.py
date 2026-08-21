@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from time import perf_counter
+from uuid import uuid4
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from ..algorithms.models import RateLimitResult
@@ -27,6 +29,8 @@ async def apply(request: Request, route: str, algorithm: str | None, count: str 
 async def record(request: Request, algorithm: str, key: str, result: RateLimitResult):
     await request.app.state.events.publish({
         "timestamp": datetime.now(timezone.utc).isoformat(), "algorithm": algorithm, "key": key,
+        "request_id": request.state.demo_request_id,
+        "latency_ms": round((perf_counter() - request.state.demo_started_at) * 1000, 1),
         "allowed": result.allowed, "remaining": result.remaining, "retry_after": result.retry_after,
         "algorithm_state": result.algorithm_state,
     })
@@ -50,6 +54,8 @@ async def reset_demo(request: Request):
 @router.post("/demo/traffic")
 async def traffic(request: Request, algorithm: str | None = None):
     # This algorithm override is demo-only scaffolding; production uses fixed config rules.
+    request.state.demo_request_id = f"req_{uuid4().hex[:7]}"
+    request.state.demo_started_at = perf_counter()
     if algorithm not in {None, "token_bucket", "sliding_window"}:
         return {"error": "invalid_algorithm"}
     result, used = await apply(request, "/demo/traffic", algorithm)
@@ -64,6 +70,8 @@ async def traffic(request: Request, algorithm: str | None = None):
 
 @router.post("/demo/login")
 async def login(payload: Login, request: Request, algorithm: str | None = None):
+    request.state.demo_request_id = f"req_{uuid4().hex[:7]}"
+    request.state.demo_started_at = perf_counter()
     if algorithm not in {None, "token_bucket", "sliding_window"}:
         return {"error": "invalid_algorithm"}
     request.state.rate_limit_account = payload.username.strip().lower()

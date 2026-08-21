@@ -186,62 +186,54 @@ function App() {
       </header>
       <div className="layout">
         <section className="controls">
-          <h2>Traffic simulator</h2>
-          <div className="primary-actions">
-            <button className="start" onClick={run}>
-              Start simulation
-            </button>
-            <button
-              className="secondary"
-              onClick={() =>
-                (mode === "both" ? algorithms : [mode]).forEach(fire)
-              }
-            >
-              Fire one
-            </button>
+          <div className="mb-8 px-2">
+            <div className="mb-2 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-outline-variant bg-primary-fixed font-code-sm text-code-sm font-bold text-primary" aria-hidden="true">RL</div>
+              <div>
+                <h2 className="font-headline-lg text-[18px] font-bold text-primary-container">Simulation control</h2>
+                <p className="font-label-technical text-label-technical text-on-surface-variant">v1.0.0</p>
+              </div>
+            </div>
+            <button className="mt-4 w-full rounded-lg bg-primary-container py-2 font-code-sm text-code-sm font-bold text-on-primary transition-colors duration-150 hover:bg-primary active:scale-95" onClick={run}>Start simulation</button>
+            <button className="mt-2 w-full rounded-lg border border-outline-variant bg-transparent py-2 font-code-sm text-code-sm text-on-surface-variant transition-colors duration-150 hover:bg-surface-container-highest" onClick={() =>
+              (mode === "both" ? algorithms : [mode]).forEach(fire)
+            }>Fire one</button>
           </div>
-          <div className="control-divider" />
-          <h3 className="parameters-title">Simulation parameters</h3>
-          <label>
-            Scenario preset
-            <select value={preset} onChange={(e) => setPreset(e.target.value)}>
-              <option value="steady">Steady traffic</option>
-              <option value="burst">Burst then idle</option>
-              <option value="trickle">Burst then trickle</option>
-              <option value="login">Login brute-force</option>
-            </select>
-          </label>
-          <button className="reset" onClick={resetDemo}>
-            Reset
-          </button>
-          <label>
-            Request rate <output>{rps} RPS</output>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={rps}
-              onChange={(e) => setRps(Number(e.target.value))}
-            />
-          </label>
-          <label>
-            Burst size <output>{burstSize} requests</output>
-            <input
-              type="range"
-              min="1"
-              max="20"
-              value={burstSize}
-              onChange={(e) => setBurstSize(Number(e.target.value))}
-            />
-          </label>
-          <label>
-            Run against
-            <select value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="both">Side-by-side</option>
-              <option value="token_bucket">Token bucket</option>
-              <option value="sliding_window">Sliding window</option>
-            </select>
-          </label>
+          <div className="mb-4 mt-4 border-t border-outline-variant pt-4">
+            <h3 className="mb-3 px-2 font-code-sm text-code-sm text-on-surface">Simulation parameters</h3>
+            <div className="space-y-4 px-2">
+              <div>
+                <label className="mb-1 flex justify-between font-label-technical text-label-technical text-on-surface-variant">
+                  <span>Request rate (RPS)</span><span className="font-code-sm text-primary-container">{rps}</span>
+                </label>
+                <input type="range" min="1" max="10" value={rps} onChange={(e) => setRps(Number(e.target.value))} />
+              </div>
+              <div>
+                <label className="mb-1 flex justify-between font-label-technical text-label-technical text-on-surface-variant">
+                  <span>Burst size</span><span className="font-code-sm text-primary-container">{burstSize}</span>
+                </label>
+                <input type="range" min="1" max="20" value={burstSize} onChange={(e) => setBurstSize(Number(e.target.value))} />
+              </div>
+              <div>
+                <label className="mb-1 block font-label-technical text-label-technical text-on-surface-variant">Scenario preset</label>
+                <select className="w-full rounded border border-outline-variant bg-surface p-1.5 font-code-sm text-code-sm text-on-surface focus:border-primary-container focus:outline-none" value={preset} onChange={(e) => setPreset(e.target.value)}>
+                  <option value="steady">Steady traffic</option>
+                  <option value="burst">Burst then idle</option>
+                  <option value="trickle">Burst then trickle</option>
+                  <option value="login">Login brute-force</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block font-label-technical text-label-technical text-on-surface-variant">Run against</label>
+                <select className="w-full rounded border border-outline-variant bg-surface p-1.5 font-code-sm text-code-sm text-on-surface focus:border-primary-container focus:outline-none" value={mode} onChange={(e) => setMode(e.target.value)}>
+                  <option value="both">Side-by-side</option>
+                  <option value="token_bucket">Token bucket</option>
+                  <option value="sliding_window">Sliding window</option>
+                </select>
+              </div>
+              <button className="w-full rounded border border-outline-variant bg-transparent py-1.5 font-label-technical text-label-technical text-on-surface-variant transition-colors hover:bg-surface-container-highest" onClick={resetDemo}>Reset</button>
+            </div>
+          </div>
           <details>
             <summary>Why this design?</summary>
             <p>
@@ -266,20 +258,37 @@ function App() {
             />
           )}
           <section className="log">
-            <h2>Live request log</h2>
-            {events
-              .slice()
-              .reverse()
-              .map((e, i) => (
-                <div key={i}>
-                  <time>{new Date(e.timestamp).toLocaleTimeString()}</time>
-                  <b>{e.algorithm.replace("_", " ")}</b>
-                  <span className={e.allowed ? "allowed" : "blocked"}>
-                    {e.allowed ? "allowed" : "blocked"}
-                  </span>
-                  {!e.allowed && ` retry ${Math.ceil(e.retry_after)}s`}
-                </div>
-              ))}
+            <h2 className="mb-4">Live request log</h2>
+            <div className="max-h-[280px] overflow-auto">
+              <table className="w-full whitespace-nowrap border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-outline-variant bg-surface-container-low font-label-technical text-[10px] uppercase text-outline">
+                    <th className="p-3 font-normal">Timestamp (UTC)</th>
+                    <th className="p-3 font-normal">Request ID</th>
+                    <th className="p-3 font-normal">Algorithm</th>
+                    <th className="p-3 font-normal">Status</th>
+                    <th className="p-3 text-right font-normal">Latency</th>
+                    <th className="p-3 font-normal">State</th>
+                  </tr>
+                </thead>
+                <tbody className="font-code-sm text-[12px] text-on-surface">
+                  {events.slice().reverse().map((event, index) => {
+                    const state = event.algorithm_state || {};
+                    const stateText = event.algorithm === "token_bucket"
+                      ? `Tokens: ${(state.tokens ?? 0).toFixed?.(1) ?? state.tokens}/${state.capacity ?? "—"}`
+                      : `Count: ${state.count ?? 0}/${state.limit ?? "—"}`;
+                    return <tr key={`${event.request_id ?? event.timestamp}-${index}`} className={`cursor-pointer border-b border-outline-variant transition-colors hover:bg-surface-variant ${event.allowed ? "" : "bg-error-container/30"}`}>
+                      <td className="p-3 text-outline">{new Date(event.timestamp).toISOString().slice(11, 23)}</td>
+                      <td className="p-3 font-medium text-primary">{event.request_id ?? `req_${index}`}</td>
+                      <td className="p-3">{event.algorithm.replace("_", " ")}</td>
+                      <td className="p-3"><span className={`inline-flex items-center gap-1 ${event.allowed ? "text-primary" : "text-error"}`}><span aria-hidden="true">{event.allowed ? "✓" : "×"}</span>{event.allowed ? "ALLOWED" : "BLOCKED"}</span></td>
+                      <td className="p-3 text-right">{event.latency_ms == null ? "—" : `${event.latency_ms}ms`}</td>
+                      <td className="p-3 text-outline">{stateText}{!event.allowed && ` · retry ${Math.ceil(event.retry_after)}s`}</td>
+                    </tr>;
+                  })}
+                </tbody>
+              </table>
+            </div>
           </section>
         </section>
       </div>

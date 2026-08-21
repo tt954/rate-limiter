@@ -35,29 +35,8 @@
   select {
     @apply mt-[7px] block w-full rounded-lg border border-outline-variant bg-surface-container-lowest p-2.5 font-body-md text-body-md text-on-surface;
   }
-  .primary-actions {
-    @apply my-[14px] mb-[22px] flex gap-stack-sm;
-  }
   button {
     @apply cursor-pointer rounded-lg border-0 bg-primary px-[14px] py-2.5 font-headline-lg font-bold text-on-primary;
-  }
-  .start {
-    @apply flex-1 text-[15px];
-  }
-  .secondary {
-    @apply bg-secondary text-on-secondary;
-  }
-  .reset {
-    @apply mt-2.5 w-full border border-tertiary bg-transparent text-tertiary;
-  }
-  .control-divider {
-    @apply my-5 h-px bg-outline-variant;
-  }
-  .parameters-title {
-    @apply m-0 text-[15px] text-on-surface;
-  }
-  label output {
-    @apply float-right font-label-technical text-[12px] text-primary;
   }
   input[type="range"] {
     @apply mt-2.5 block w-full accent-primary;
@@ -78,19 +57,8 @@
     @apply font-code-sm text-[20px] text-secondary;
   }
   .log {
-    @apply col-[1/-1] max-h-[280px] overflow-auto;
+    @apply col-[1/-1];
   }
-  .log div {
-    @apply border-b border-outline-variant p-[7px] font-code-sm text-code-sm;
-  }
-  .log time {
-    @apply mr-[15px] text-tertiary;
-  }
-  .log b {
-    @apply mr-3 font-normal;
-  }
-  .allowed { @apply text-primary; }
-  .blocked { @apply text-secondary; }
 }
 
 @media (max-width: 750px) {
