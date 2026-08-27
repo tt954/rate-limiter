@@ -1,9 +1,17 @@
-import React, { useEffect, useRef, useState } from "react";
-import { logIn } from "../api/login";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { logIn, type LoginResult } from "../api/login";
 
-const emptyErrors = { email: "", password: "" };
+type Field = "email" | "password";
+type FieldErrors = Record<Field, string>;
+type FormStatus = LoginResult | { kind: "idle" | "submitting"; message: string };
 
-function validateEmail(email) {
+interface LoginPageProps {
+  active?: boolean;
+}
+
+const emptyErrors: FieldErrors = { email: "", password: "" };
+
+function validateEmail(email: string): string {
   const value = email.trim();
   if (!value) return "Enter your email address.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
@@ -12,21 +20,21 @@ function validateEmail(email) {
   return "";
 }
 
-function validatePassword(password) {
+function validatePassword(password: string): string {
   return password ? "" : "Enter your password.";
 }
 
-export default function LoginPage({ active = true }) {
+export default function LoginPage({ active = true }: LoginPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState(emptyErrors);
-  const [status, setStatus] = useState({ kind: "idle", message: "" });
+  const [status, setStatus] = useState<FormStatus>({ kind: "idle", message: "" });
   const [cooldownEndsAt, setCooldownEndsAt] = useState(0);
   const [now, setNow] = useState(Date.now());
-  const passwordRef = useRef(null);
-  const emailRef = useRef(null);
-  const requestRef = useRef(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
   const cooldownSeconds = Math.max(0, Math.ceil((cooldownEndsAt - now) / 1000));
   const isSubmitting = status.kind === "submitting";
@@ -51,7 +59,7 @@ export default function LoginPage({ active = true }) {
     }
   }, [cooldownEndsAt, cooldownSeconds]);
 
-  const updateField = (field, value) => {
+  const updateField = (field: Field, value: string) => {
     if (field === "email") setEmail(value);
     else setPassword(value);
 
@@ -61,14 +69,14 @@ export default function LoginPage({ active = true }) {
     }
   };
 
-  const validateField = (field) => {
+  const validateField = (field: Field) => {
     const message = field === "email"
       ? validateEmail(email)
       : validatePassword(password);
     setErrors((current) => ({ ...current, [field]: message }));
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmitting || isCoolingDown) return;
 
@@ -100,8 +108,8 @@ export default function LoginPage({ active = true }) {
           requestAnimationFrame(() => passwordRef.current?.focus());
         }
       }
-    } catch (error) {
-      if (error.name !== "AbortError") {
+    } catch (error: unknown) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
         setStatus({
           kind: "network_error",
           message: "We could not reach the login service. Check your connection and try again.",

@@ -1,12 +1,22 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import LoginPage from "./components/LoginPage";
+import type { Algorithm, DemoEvent } from "./types";
 import "./style.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
-const algorithms = ["token_bucket", "sliding_window"];
+const algorithms: Algorithm[] = ["token_bucket", "sliding_window"];
 
-function HeaderCountdown({ event, label, now }) {
+type Mode = Algorithm | "both";
+type Preset = "steady" | "burst" | "trickle" | "login";
+
+interface HeaderCountdownProps {
+  event?: DemoEvent;
+  label: string;
+  now: number;
+}
+
+function HeaderCountdown({ event, label, now }: HeaderCountdownProps) {
   const unlockAt = event
     ? new Date(event.timestamp).getTime() + event.retry_after * 1000
     : 0;
@@ -20,7 +30,13 @@ function HeaderCountdown({ event, label, now }) {
   );
 }
 
-function AlgorithmCard({ algorithm, events, now }) {
+interface AlgorithmCardProps {
+  algorithm: Algorithm;
+  events: DemoEvent[];
+  now: number;
+}
+
+function AlgorithmCard({ algorithm, events, now }: AlgorithmCardProps) {
   const recent = events.filter((e) => e.algorithm === algorithm).slice(-20);
   const last = recent.at(-1);
   if (algorithm === "token_bucket") {
@@ -116,25 +132,27 @@ function AlgorithmCard({ algorithm, events, now }) {
 }
 
 function Simulator() {
-  const [events, setEvents] = useState([]),
-    [mode, setMode] = useState("both"),
-    [preset, setPreset] = useState("burst"),
+  const [events, setEvents] = useState<DemoEvent[]>([]),
+    [mode, setMode] = useState<Mode>("both"),
+    [preset, setPreset] = useState<Preset>("burst"),
     [rps, setRps] = useState(2),
     [burstSize, setBurstSize] = useState(10),
     [now, setNow] = useState(Date.now());
-  const timers = useRef([]);
+  const timers = useRef<number[]>([]);
   const login = preset === "login";
   useEffect(() => {
     const source = new EventSource(`${API}/demo/stream`);
-    source.onmessage = (e) =>
-      setEvents((x) => [...x, JSON.parse(e.data)].slice(-100));
+    source.onmessage = (event: MessageEvent<string>) => {
+      const nextEvent = JSON.parse(event.data) as DemoEvent;
+      setEvents((current) => [...current, nextEvent].slice(-100));
+    };
     return () => source.close();
   }, []);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(timer);
   }, []);
-  const fire = (algorithm) =>
+  const fire = (algorithm: Algorithm) =>
     fetch(`${API}/demo/${login ? "login" : "traffic"}?algorithm=${algorithm}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -143,14 +161,14 @@ function Simulator() {
         : undefined,
     });
   const run = () => {
-    timers.current.forEach(clearTimeout);
+    timers.current.forEach(window.clearTimeout);
     timers.current = [];
     const targets = mode === "both" ? algorithms : [mode];
     const send = () => targets.forEach(fire);
     const interval = 1000 / rps;
     const scheduleSteady = (start = 0, durationSeconds = 6) => {
       for (let i = 0; i < rps * durationSeconds; i++)
-        timers.current.push(setTimeout(send, start + i * interval));
+        timers.current.push(window.setTimeout(send, start + i * interval));
     };
     if (preset === "steady") {
       scheduleSteady();
@@ -160,7 +178,7 @@ function Simulator() {
     }
   };
   const resetDemo = async () => {
-    timers.current.forEach(clearTimeout);
+    timers.current.forEach(window.clearTimeout);
     timers.current = [];
     await fetch(`${API}/demo/reset`, { method: "POST" });
     setEvents([]);
@@ -203,7 +221,7 @@ function Simulator() {
               </div>
               <div>
                 <label className="mb-1 block font-label-technical text-label-technical text-on-surface-variant">Scenario preset</label>
-                <select className="w-full rounded border border-outline-variant bg-surface p-1.5 font-code-sm text-code-sm text-on-surface focus:border-primary-container focus:outline-none" value={preset} onChange={(e) => setPreset(e.target.value)}>
+                <select className="w-full rounded border border-outline-variant bg-surface p-1.5 font-code-sm text-code-sm text-on-surface focus:border-primary-container focus:outline-none" value={preset} onChange={(e) => setPreset(e.target.value as Preset)}>
                   <option value="steady">Steady traffic</option>
                   <option value="burst">Burst then idle</option>
                   <option value="trickle">Burst then trickle</option>
@@ -212,7 +230,7 @@ function Simulator() {
               </div>
               <div>
                 <label className="mb-1 block font-label-technical text-label-technical text-on-surface-variant">Run against</label>
-                <select className="w-full rounded border border-outline-variant bg-surface p-1.5 font-code-sm text-code-sm text-on-surface focus:border-primary-container focus:outline-none" value={mode} onChange={(e) => setMode(e.target.value)}>
+                <select className="w-full rounded border border-outline-variant bg-surface p-1.5 font-code-sm text-code-sm text-on-surface focus:border-primary-container focus:outline-none" value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
                   <option value="both">Side-by-side</option>
                   <option value="token_bucket">Token bucket</option>
                   <option value="sliding_window">Sliding window</option>
@@ -273,7 +291,7 @@ function Simulator() {
 }
 
 function App() {
-  const [view, setView] = useState("lab");
+  const [view, setView] = useState<"lab" | "login">("lab");
 
   return (
     <main>
@@ -306,4 +324,7 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error("Root element not found");
+
+createRoot(rootElement).render(<App />);
