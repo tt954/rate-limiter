@@ -1,6 +1,4 @@
-# Build Prompt: Rate Limiter Demo App
-
-Copy everything below into your coding assistant (Claude Code, etc.) to scaffold the project.
+# Plan: Rate Limiter Demo App
 
 ---
 
@@ -20,6 +18,8 @@ The design follows an existing RFC (I will provide it — read it fully before w
 
 ## Backend Requirements
 
+
+
 ### 1. Algorithm implementations (`backend/app/algorithms/`)
 
 Implement both as standalone, independently testable classes/functions — no FastAPI or HTTP concerns inside them:
@@ -28,24 +28,32 @@ Implement both as standalone, independently testable classes/functions — no Fa
 - `sliding_window.py`: sliding window counter using minute-bucketed Redis keys (`INCR` + `EXPIRE`), summed across the trailing window. Configurable `limit` and `window_seconds`.
 
 Both should expose the same interface, e.g.:
+
 ```python
 async def check(key: str) -> RateLimitResult  # allowed: bool, remaining: int, retry_after: float, algorithm_state: dict
 ```
+
 `algorithm_state` should return whatever internal state is useful for the frontend to visualize (current token count for bucket; current request count + window boundaries for sliding window).
 
 ### 2. Generic rate limit engine (`backend/app/engine/`)
 
 A config-driven engine that wraps the two algorithms behind a common rule interface, matching the RFC's design:
+
 - Rules are defined declaratively (route → list of rules, each with `key_type`, `algorithm`, and algorithm-specific params).
 - Pluggable key resolvers: `resolve_ip(request)`, `resolve_account(request)` at minimum.
 - A FastAPI dependency (`Depends(rate_limit(...))`) that applies the configured rules to a route and raises `HTTPException(429)` with a `Retry-After` header and the JSON body shape from the RFC when blocked.
 
+
+
 ### 3. Demo/simulation endpoints (`backend/app/routes/demo.py`)
 
 These exist purely to be hammered by the frontend's traffic simulator:
+
 - `POST /demo/traffic` — generic endpoint, rate-limited per the "Phase 1" config (token bucket, IP-keyed).
 - `POST /demo/login` — simulated login endpoint, accepts `{ "username": str, "password": str }`, always fails unless password == `"correct"`, rate-limited per "Phase 2" config (sliding window, both IP-keyed and account-keyed, `failures_only` on the account rule).
 - Both endpoints should let the caller pass an `algorithm` override (`token_bucket` | `sliding_window`) via query param, purely for demo purposes, so the frontend can run identical traffic against both algorithms side by side. (Note in a comment that this override is demo-only scaffolding and would not exist in the real system described by the RFC.)
+
+
 
 ### 4. Live state stream (`backend/app/routes/stream.py`)
 
@@ -60,28 +68,44 @@ Externalize the rule definitions per the RFC's config schema (default global rul
 - Unit tests for both algorithms in isolation (use `fakeredis` or a test Redis instance): verify token bucket allows bursts up to capacity then throttles at refill rate; verify sliding window enforces a hard cap and correctly evaluates a trailing window (including the boundary case fixed-window would get wrong).
 - At least one test demonstrating the exact scenario from our design discussion: a "burst then trickle" traffic pattern that token bucket allows but sliding window blocks.
 
+
+
 ## Frontend Requirements
 
+
+
 ### 1. Traffic simulator panel
+
 Controls to generate traffic patterns against the demo endpoints:
+
 - **Steady** — fixed requests/sec for N seconds
 - **Burst then idle** — N requests instantly, then silence
 - **Burst then trickle** — N requests instantly, then a slow steady trickle (the brute-force/enumeration evasion pattern from the RFC)
 - A manual "fire one request" button for granular exploration
 
+
+
 ### 2. Algorithm toggle / side-by-side mode
+
 - Toggle to run a traffic pattern against a single algorithm, or
 - Side-by-side mode: same generated traffic pattern sent to both `/demo/traffic?algorithm=token_bucket` and `/demo/traffic?algorithm=sliding_window` simultaneously, with two live visualizations rendered next to each other so the difference in behavior is directly visible.
 
+
+
 ### 3. Visualizations (subscribing to the SSE stream)
+
 - **Token bucket view:** a fill-level gauge/bar showing current tokens available out of capacity, animating down on each allowed request and refilling over time.
 - **Sliding window view:** a timeline showing requests within the trailing window as marks/dots, with the window boundary visibly sliding, and a count vs. limit indicator.
 - **Shared request log:** scrolling list of recent requests with timestamp, algorithm, allowed/blocked status (color-coded), and retry-after if blocked.
 
+
+
 ### 4. Login brute-force scenario preset
+
 A dedicated preset that simulates repeated failed login attempts against `/demo/login` (burst-then-trickle pattern), run side-by-side on both algorithms, to visually reproduce the RFC's core argument for why login uses sliding window.
 
 ### 5. Design decisions panel
+
 A small collapsible sidebar or footer section that quotes/links the relevant parts of the RFC next to what's currently being visualized (e.g., when the login scenario is active, show the RFC excerpt about burst tolerance being an attack evasion risk).
 
 ## Deliverables
@@ -90,6 +114,8 @@ A small collapsible sidebar or footer section that quotes/links the relevant par
 - `README.md`: project overview, what it demonstrates, how to run it, links to the RFC and to the specific design decisions it visualizes
 - `docs/rfc-generic-rate-limiter.md` — I will provide this file, place it here unmodified
 - Clean commit history if using git (logical commits: algorithms → engine → demo routes → SSE → frontend simulator → frontend visualizations → polish)
+
+
 
 ## Build Order (please follow this sequence)
 

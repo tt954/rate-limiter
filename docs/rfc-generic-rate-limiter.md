@@ -1,4 +1,4 @@
-# RFC: Generic Request Rate Limiter (Phased: Global → Endpoint-Aware)
+# RFC: Rate Limiter
 
 **Status:** Draft
 **Author:** [TBD]
@@ -18,6 +18,7 @@ Both phases share the same engine; Phase 2 is additional *config and key resolve
 ## 2. Problem
 
 We have no request throttling anywhere in the app. This exposes us to:
+
 - Volumetric abuse / scraping / accidental traffic spikes from any client, on any route.
 - Credential stuffing and brute force specifically on `/auth/login`.
 - Resource exhaustion on expensive endpoints (password hashing, search, file uploads).
@@ -32,29 +33,38 @@ Given current scale, building a login-specific, account-aware limiter as the *fi
 - Fail safe: limiter outage must not take down the app.
 - Consistent, predictable client-facing behavior (`429` + `Retry-After`) across every route.
 
+
+
 ## 4. Non-Goals
 
 - CAPTCHA / bot detection (separate RFC).
 - Edge/CDN-level enforcement (e.g. Cloudflare rules) — complementary, out of scope, assumed to exist or be added independently as a coarser outer layer.
 - Device fingerprinting or risk-based auth.
 
+
+
 ## 5. Design
+
+
 
 ### 5.1 Algorithm decision matrix
 
 The engine supports both algorithms per rule (configurable), rather than picking one globally — different routes have different tolerance for bursts.
 
-| | Token bucket | Sliding window counter |
-|---|---|---|
-| Optimizes for | Smoothing + burst tolerance | Precise, strict cap enforcement |
-| Allows short bursts above average rate | Yes (up to bucket size) | No |
-| Best for | General API traffic, bursty-but-legitimate clients, downstream protection | Security-sensitive endpoints, hard abuse caps (brute force, enumeration) |
-| Risk if misapplied | Under-protects against bursty attacks | Over-throttles legitimate bursty clients |
-| Used for | Phase 1 default global rule | Phase 2 login account/IP rules |
+
+|                                        | Token bucket                                                              | Sliding window counter                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Optimizes for                          | Smoothing + burst tolerance                                               | Precise, strict cap enforcement                                          |
+| Allows short bursts above average rate | Yes (up to bucket size)                                                   | No                                                                       |
+| Best for                               | General API traffic, bursty-but-legitimate clients, downstream protection | Security-sensitive endpoints, hard abuse caps (brute force, enumeration) |
+| Risk if misapplied                     | Under-protects against bursty attacks                                     | Over-throttles legitimate bursty clients                                 |
+| Used for                               | Phase 1 default global rule                                               | Phase 2 login account/IP rules                                           |
+
 
 **Decision for this RFC:**
+
 - **Phase 1 (global default):** token bucket. General app traffic is naturally bursty (page loads, dashboard refreshes), and the goal is smoothing/infra protection, not eliminating bursts.
-- **Phase 2 (`/auth/login` account + IP rules):** sliding window. Any burst on a login endpoint is itself a likely attack signature (brute force, credential stuffing, account enumeration) — burst tolerance would work against us here, potentially letting an attacker front-load a burst then trickle at the refill rate to evade detection.
+- **Phase 2 (**`/auth/login` **account + IP rules):** sliding window. Any burst on a login endpoint is itself a likely attack signature (brute force, credential stuffing, account enumeration) — burst tolerance would work against us here, potentially letting an attacker front-load a burst then trickle at the refill rate to evade detection.
 
 Both algorithms are implemented once in the shared engine (`bucket` type: `token` | `sliding_window` in rule config) so no route is locked into one approach.
 
@@ -88,6 +98,8 @@ rate_limits:
 - **Key resolution:** pluggable resolvers (`resolveIp`, `resolveApiKey`, `resolveAccount`, ...) referenced by name in config. Phase 1 only needs `resolveIp`; Phase 2 adds `resolveAccount` without touching the engine.
 - **Count semantics:** configurable per rule (`all` vs `failures_only` vs `success_only`), resolved by the caller after the request completes. Phase 1 uses `all` everywhere; Phase 2's login rule uses `failures_only` (see §5.4).
 
+
+
 ### 5.3 Phase 1 — Global, generic limiter (ship now)
 
 - Applies to **every route** via a default rule, keyed on IP.
@@ -104,6 +116,8 @@ Retry-After: <seconds>
   "retry_after_seconds": 12
 }
 ```
+
+
 
 ### 5.4 Phase 2 — Account-aware layer for `/auth/login` (ship when triggered)
 
@@ -129,6 +143,7 @@ routes:
 - No new infrastructure: same Redis, same middleware, same response contract. Just a new rule + resolver.
 
 **Trigger to build Phase 2:** any of —
+
 - Observed clustering of failed logins on specific accounts (credential stuffing signature).
 - Handling sensitive data (PII, payments) making the login surface a higher-value target.
 - A security review or incident flags the gap.
@@ -142,11 +157,15 @@ If/when an edge layer (Cloudflare, API Gateway, etc.) is added, it complements t
 
 ## 7. Failure Modes
 
-| Failure | Behavior |
-|---|---|
-| Redis unreachable | **Fail open**, fall back to a conservative in-memory per-instance limiter, alert on-call. Failing closed turns a Redis outage into a full outage of every route — unacceptable given this now sits in front of all traffic. |
-| Redis latency spike | Timeout the check (e.g. 20ms); treat as fail-open on timeout, with alerting. |
-| Misconfigured rule (e.g. limit: 0) | Config validated at startup/deploy; reject deploy if any rule is degenerate (limit ≤ 0, window ≤ 0). |
+
+| Failure                            | Behavior                                                                                                                                                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Redis unreachable                  | **Fail open**, fall back to a conservative in-memory per-instance limiter, alert on-call. Failing closed turns a Redis outage into a full outage of every route — unacceptable given this now sits in front of all traffic. |
+| Redis latency spike                | Timeout the check (e.g. 20ms); treat as fail-open on timeout, with alerting.                                                                                                                                                |
+| Misconfigured rule (e.g. limit: 0) | Config validated at startup/deploy; reject deploy if any rule is degenerate (limit ≤ 0, window ≤ 0).                                                                                                                        |
+
+
+
 
 ## 8. Observability
 
@@ -163,11 +182,15 @@ Alert on abnormal fail-open rate (Redis degradation) and on abnormal trigger-rat
 3. Add tighter IP overrides for `/auth/login`, `/auth/signup`, `/password-reset`.
 4. Monitor for Phase 2 trigger conditions (§5.4); implement `resolveAccount` and the account rule when triggered — no engine changes required.
 
+
+
 ## 10. Alternatives Considered
 
 - **Build the account-aware login limiter first (original RFC):** rejected as the *first* step given current scale — over-engineered relative to present risk, and doesn't protect any other endpoint. Retained as Phase 2, ready to slot in.
 - **Rely solely on an edge/CDN layer:** rejected as sole solution — no account context, can't stop targeted brute force, and we may not have an edge layer yet at this stage.
 - **Separate limiter implementations per team/service:** rejected — fragments logic, duplicates Redis usage patterns, harder to reason about consistently.
+
+
 
 ## 11. Open Questions
 
