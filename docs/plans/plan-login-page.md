@@ -16,9 +16,11 @@ This is a demo login flow, not production authentication. The current backend tr
 - A blocked attempt returns HTTP 429 with a `Retry-After` header and an error body containing `message` and `retry_after_seconds`.
 - The configured login policy uses sliding-window limits for both IP attempts and failed attempts per normalized account.
 
+
+
 ## UX and Security Principles
 
-Use the guidance in `/Users/tt/Documents/code/toast/src/posts/sign-up-and-log-in.md`, limited to the parts relevant to login:
+Use the guidance:
 
 - Autofocus the username/email field.
 - Use explicit, associated labels and semantic input types (`email` and `password`) with appropriate autocomplete attributes.
@@ -36,18 +38,22 @@ Because this iteration is login-only, do not add signup, forgot-password, rememb
 1. Add a small top-level navigation control that switches between the existing rate-limiter lab and a dedicated **Login demo** view. Keep this dependency-free unless browser-addressable routes become a requirement.
 2. Present a centered login card that visually fits the existing typography, color tokens, and technical-demo aesthetic.
 3. Include:
-   - A short explanation that this is a simulated login protected by the sliding-window limiter.
-   - An email field.
-   - A password field with a show/hide control.
-   - A **Log in** button.
-   - A compact demo hint stating that `correct` is the success password, so the flow is discoverable.
+  - A short explanation that this is a simulated login protected by the sliding-window limiter.
+  - An email field.
+  - A password field with a show/hide control.
+  - A **Log in** button.
+  - A compact demo hint stating that `correct` is the success password, so the flow is discoverable.
 4. Submit to `POST /demo/login` without an algorithm override, allowing the backend's configured sliding-window policy to remain authoritative.
 5. On success, show an inline success state in the login view. Do not redirect to or imply the existence of an authenticated area because the endpoint creates no session.
 6. On invalid credentials, retain the email, clear the password, focus the password field, and show a single generic credential error.
 7. On HTTP 429, show the server-provided retry message/countdown, retain the email, clear the password, and temporarily disable submission until the retry period ends.
 8. On a network or unexpected server error, preserve both fields where safe and show a retryable form-level message.
 
+
+
 ## Implementation Plan
+
+
 
 ### 1. Separate API behavior from presentation
 
@@ -56,6 +62,8 @@ Because this iteration is login-only, do not add signup, forgot-password, rememb
 - Read the 429 delay from `Retry-After`, with `retry_after_seconds` as a fallback.
 - Handle non-JSON and non-2xx responses defensively.
 - Reuse the configured `VITE_API_URL` base URL.
+
+
 
 ### 2. Add the login view
 
@@ -70,12 +78,16 @@ Because this iteration is login-only, do not add signup, forgot-password, rememb
 - Disable the submit button while a request is active and while a rate-limit cooldown is active.
 - Clean up cooldown timers if the view unmounts.
 
+
+
 ### 3. Integrate view switching
 
 - Keep the existing simulator as the default view.
 - Add a clear **Login demo** entry point and a way back to the algorithm lab.
 - Preserve simulator state when switching views by keeping navigation state above both views or by hiding/unmounting intentionally and documenting the choice.
 - If direct URLs, refresh persistence, or browser back/forward support are desired later, introduce routing as a separate enhancement rather than silently adding a dependency in this task.
+
+
 
 ### 4. Style responsively
 
@@ -84,12 +96,16 @@ Because this iteration is login-only, do not add signup, forgot-password, rememb
 - Ensure the card, fields, actions, error text, and password toggle work at mobile widths and at 200% zoom.
 - Provide visible focus treatment and do not rely on color alone for success/error meaning.
 
+
+
 ### 5. Tighten the endpoint contract where needed
 
 - Keep `POST /demo/login` and its demo-only credential behavior unchanged unless implementation reveals a contract gap.
 - Confirm invalid credentials remain indistinguishable at the response level; do not expose account existence.
 - Consider returning the invalid-credential outcome with HTTP 401 in a future API-contract cleanup, but do not make that unrelated breaking change as part of the page unless frontend and backend tests are updated together.
 - Do not add cookies, tokens, user storage, password hashing, protected routes, or session management in this iteration.
+
+
 
 ### 6. Verify behavior
 
@@ -101,6 +117,8 @@ Because this iteration is login-only, do not add signup, forgot-password, rememb
 - Run the frontend production build and existing backend tests.
 - Manually exercise the page against Docker Compose using `correct`, an incorrect password, and enough failed attempts to trigger both account and IP limits.
 - Check keyboard-only navigation, screen-reader announcements, narrow mobile layout, and browser back/forward expectations for the chosen view-switching approach.
+
+
 
 ## Expected File Changes
 
@@ -126,6 +144,8 @@ No backend change is expected for the initial implementation.
 - Network and unexpected server failures are distinguishable from invalid credentials and can be retried.
 - The page is usable on mobile, with a keyboard, and at 200% zoom without breaking the existing simulator.
 - Signup and all other authentication/account-recovery flows remain out of scope.
+
+
 
 ## Follow-ups (Out of Scope)
 

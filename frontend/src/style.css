@@ -14,6 +14,15 @@
   main {
     @apply mx-auto max-w-[1160px] px-gutter py-margin-desktop;
   }
+  .app-nav {
+    @apply mb-stack-lg flex w-fit gap-1 rounded-xl border border-outline-variant bg-surface-container-low p-1;
+  }
+  .app-nav__item {
+    @apply rounded-lg bg-transparent px-4 py-2 font-code-sm text-code-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-lowest hover:text-on-surface;
+  }
+  .app-nav__item--active {
+    @apply bg-primary text-on-primary shadow-sm hover:bg-primary hover:text-on-primary;
+  }
   h1 {
     @apply m-[7px_0] font-display-xl text-display-xl;
   }
@@ -47,10 +56,107 @@
   .log {
     @apply col-[1/-1];
   }
+  .login-page {
+    @apply grid min-h-[600px] grid-cols-[minmax(0,1fr)_minmax(340px,440px)] items-center gap-16 rounded-xl border border-outline-variant bg-surface-container-low p-12;
+  }
+  .login-intro {
+    @apply max-w-[540px];
+  }
+  .login-intro > p {
+    @apply mt-4 max-w-[510px] font-body-lg text-body-lg text-on-surface-variant;
+  }
+  .login-eyebrow {
+    @apply inline-flex rounded border border-primary-fixed-dim bg-primary-fixed px-2 py-1 font-code-sm text-[11px] font-medium uppercase tracking-[0.08em] text-on-primary-fixed-variant;
+  }
+  .login-policy {
+    @apply mt-8 grid grid-cols-3 gap-3;
+  }
+  .login-policy > div {
+    @apply rounded-lg border border-outline-variant bg-surface-container-lowest p-3;
+  }
+  .login-policy span {
+    @apply block font-label-technical text-[10px] uppercase text-on-surface-variant;
+  }
+  .login-policy strong {
+    @apply mt-1 block font-code-sm text-[12px] text-on-surface;
+  }
+  .login-card {
+    @apply rounded-xl border border-outline-variant bg-surface-container-lowest p-8 shadow-[0_18px_50px_rgba(26,28,28,0.08)];
+  }
+  .login-card__heading {
+    @apply mb-7 flex items-center gap-3 border-b border-outline-variant pb-6;
+  }
+  .login-card__heading h2 {
+    @apply mb-1 text-[24px] leading-8;
+  }
+  .login-card__heading p {
+    @apply m-0 font-body-md text-sm text-on-surface-variant;
+  }
+  .login-mark {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary-fixed-dim bg-primary-fixed font-code-sm text-code-sm font-bold text-primary;
+  }
+  .login-field {
+    @apply mb-5;
+  }
+  .login-field label {
+    @apply mb-2 mt-0 font-label-technical text-label-technical text-on-surface;
+  }
+  .login-field input {
+    @apply box-border w-full rounded-lg border border-outline-variant bg-surface px-3 py-3 font-body-md text-body-md text-on-surface outline-none transition-[border-color,box-shadow] placeholder:text-outline focus:border-primary focus:ring-2 focus:ring-primary-fixed;
+  }
+  .login-field input[aria-invalid="true"] {
+    @apply border-error focus:border-error focus:ring-error-container;
+  }
+  .login-field__error {
+    @apply mb-0 mt-1.5 font-code-sm text-[11px] text-error;
+  }
+  .login-password {
+    @apply relative;
+  }
+  .login-password input {
+    @apply pr-[70px];
+  }
+  .login-password__toggle {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 rounded bg-transparent px-2 py-1 font-code-sm text-[11px] font-medium text-primary hover:bg-primary-fixed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary;
+  }
+  .login-demo-hint {
+    @apply -mt-1 mb-5 rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 font-body-md text-sm text-on-surface-variant;
+  }
+  .login-demo-hint code {
+    @apply font-code-sm font-medium text-primary;
+  }
+  .login-submit {
+    @apply w-full rounded-lg bg-primary py-3 font-headline-lg text-base text-on-primary transition-[background-color,transform] hover:bg-on-primary-fixed-variant active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-outline disabled:opacity-70;
+  }
+  .login-status {
+    @apply mt-4 min-h-10 rounded-lg border border-transparent px-3 py-2 font-body-md text-sm;
+  }
+  .login-status:empty {
+    @apply invisible;
+  }
+  .login-status--neutral {
+    @apply bg-surface-container-low text-on-surface-variant;
+  }
+  .login-status--success {
+    @apply border-primary-fixed-dim bg-primary-fixed text-on-primary-fixed-variant;
+  }
+  .login-status--error {
+    @apply border-error-container bg-error-container text-on-error-container;
+  }
 }
 
 @media (max-width: 750px) {
   main { @apply px-margin-mobile py-10; }
   .layout, .visuals { @apply grid-cols-1; }
   h1 { @apply font-headline-lg-mobile text-headline-lg-mobile; }
+  .app-nav { @apply mb-6 w-full; }
+  .app-nav__item { @apply flex-1; }
+  .login-page { @apply min-h-0 grid-cols-1 gap-8 p-5; }
+  .login-policy { @apply grid-cols-1; }
+  .login-card { @apply p-5; }
+}
+
+@media (min-width: 751px) and (max-width: 960px) {
+  .login-page { @apply gap-8 p-8; }
+  .login-policy { @apply grid-cols-1; }
 }

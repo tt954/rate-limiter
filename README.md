@@ -15,6 +15,8 @@ docker compose up --build
 
 Open http://localhost:5173. The API is at http://localhost:8000 and its health endpoint is `/health`.
 
+Use the **Login demo** navigation item to exercise the protected login form. Any validly formatted email is accepted and the demo password is `correct`. Incorrect passwords count against the account-aware sliding-window rule; repeated attempts can produce a visible `429` cooldown. This endpoint verifies the simulated credentials only—it does not create a user session.
+
 ## Test algorithms
 
 ```bash

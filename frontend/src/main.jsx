@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import LoginPage from "./components/LoginPage";
 import "./style.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -114,7 +115,7 @@ function AlgorithmCard({ algorithm, events, now }) {
   );
 }
 
-function App() {
+function Simulator() {
   const [events, setEvents] = useState([]),
     [mode, setMode] = useState("both"),
     [preset, setPreset] = useState("burst"),
@@ -165,7 +166,7 @@ function App() {
     setEvents([]);
   };
   return (
-    <main>
+    <>
       <header>
         <h1>Rate limiter algorithms</h1>
         <p>Watch the same traffic behave differently under two algorithms.</p>
@@ -267,7 +268,42 @@ function App() {
           </section>
         </section>
       </div>
+    </>
+  );
+}
+
+function App() {
+  const [view, setView] = useState("lab");
+
+  return (
+    <main>
+      <nav className="app-nav" aria-label="Demo views">
+        <button
+          className={view === "lab" ? "app-nav__item app-nav__item--active" : "app-nav__item"}
+          type="button"
+          aria-current={view === "lab" ? "page" : undefined}
+          onClick={() => setView("lab")}
+        >
+          Algorithm lab
+        </button>
+        <button
+          className={view === "login" ? "app-nav__item app-nav__item--active" : "app-nav__item"}
+          type="button"
+          aria-current={view === "login" ? "page" : undefined}
+          onClick={() => setView("login")}
+        >
+          Login demo
+        </button>
+      </nav>
+
+      <div hidden={view !== "lab"}>
+        <Simulator />
+      </div>
+      <div hidden={view !== "login"}>
+        <LoginPage active={view === "login"} />
+      </div>
     </main>
   );
 }
+
 createRoot(document.getElementById("root")).render(<App />);
